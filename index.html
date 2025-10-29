@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EdTech Calendar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/react-big-calendar@1.8.1/lib/css/react-big-calendar.css"
+    />
+    <!-- Add Drag and Drop Addon CSS -->
+    <link 
+      rel="stylesheet" 
+      href="https://unpkg.com/react-big-calendar@1.8.1/lib/addons/dragAndDrop/styles.css" 
+    />
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
+    "react-big-calendar": "https://aistudiocdn.com/react-big-calendar@^1.19.4",
+    "react-big-calendar/addons/dragAndDrop": "https://aistudiocdn.com/react-big-calendar@^1.19.4/lib/addons/dragAndDrop/index.js",
+    "moment": "https://aistudiocdn.com/moment@^2.30.1",
+    "react-big-calendar/": "https://aistudiocdn.com/react-big-calendar@^1.19.4/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-100">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

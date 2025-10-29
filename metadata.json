@@ -1,0 +1,5 @@
+{
+  "name": "EdTech Calendar UI",
+  "description": "A frontend application for an EdTech calendar and scheduling system. It provides a user-friendly interface to manage calendars, events, and sharing, designed to integrate with a corresponding backend API.",
+  "requestFramePermissions": []
+}
