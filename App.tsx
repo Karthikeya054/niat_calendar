@@ -1,100 +1,101 @@
-// App.tsx - FIXED VERSION
+// App.tsx - FINAL FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { CalendarDashboard } from './components/CalendarDashboard';
 import { LoginScreen } from './components/LoginScreen';
-import { supabaseService, supabase } from './services/supabaseService';
+import { supabaseService } from './services/supabaseService';
 import type { User } from './types';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Set a timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
-      console.error('Auth check timed out');
-      setLoading(false);
-    }, 5000);
+    let mounted = true;
 
     const checkUser = async () => {
+      console.log('🔍 Starting auth check...');
+      
       try {
-        // Check if we have an active session
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const isAuth = await supabaseService.isAuthenticated();
         
-        console.log('Session check:', session ? 'Found' : 'None', error);
-        
-        if (error) {
-          console.error('Session error:', error);
-          setUser(null);
-          setLoading(false);
-          clearTimeout(timeout);
-          return;
-        }
+        if (!mounted) return;
 
-        if (session?.user) {
+        if (isAuth) {
+          console.log('✅ User is authenticated, fetching profile...');
           try {
             const currentUser = await supabaseService.getMe();
-            console.log('User profile loaded:', currentUser);
-            setUser(currentUser);
+            if (mounted) {
+              console.log('✅ Profile loaded:', currentUser.email);
+              setUser(currentUser);
+            }
           } catch (profileError) {
-            console.error('Profile fetch error:', profileError);
-            // User exists but no profile yet - treat as logged out
-            setUser(null);
+            console.error('❌ Failed to load profile:', profileError);
+            if (mounted) {
+              // If profile fetch fails, log them out and show login
+              await supabaseService.logout();
+              setUser(null);
+              setError('Failed to load user profile. Please sign in again.');
+            }
           }
         } else {
-          setUser(null);
+          console.log('ℹ️ No active session');
+          if (mounted) {
+            setUser(null);
+          }
         }
       } catch (error) {
-        console.error('Auth check error:', error);
-        setUser(null);
+        console.error('❌ Auth check error:', error);
+        if (mounted) {
+          setUser(null);
+          setError('Authentication check failed. Please try again.');
+        }
       } finally {
-        setLoading(false);
-        clearTimeout(timeout);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
+    // Check auth immediately
     checkUser();
 
     // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+    const { data: { subscription } } = supabaseService.onAuthStateChange(
+      async (newUser) => {
+        if (!mounted) return;
         
-        if (event === 'SIGNED_IN' && session?.user) {
-          try {
-            const currentUser = await supabaseService.getMe();
-            setUser(currentUser);
-          } catch (error) {
-            console.error('Error loading user profile:', error);
-            setUser(null);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
+        console.log('🔄 Auth state changed:', newUser?.email || 'logged out');
+        setUser(newUser);
         setLoading(false);
+        setError(null);
       }
     );
 
+    // Cleanup
     return () => {
+      mounted = false;
       subscription?.unsubscribe();
-      clearTimeout(timeout);
     };
   }, []);
 
   const handleLogin = (loggedInUser: User) => {
+    console.log('✅ Login successful:', loggedInUser.email);
     setUser(loggedInUser);
+    setError(null);
   };
 
   const handleLogout = async () => {
     try {
       await supabaseService.logout();
       setUser(null);
+      setError(null);
     } catch (error) {
       console.error('Logout error:', error);
     }
   };
 
-  // Show loading screen
+  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100">
@@ -102,13 +103,43 @@ const App: React.FC = () => {
           <div className="inline-block w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
           <div className="mt-4 text-xl font-semibold text-gray-700">Loading...</div>
           <div className="mt-2 text-sm text-gray-500">Checking authentication...</div>
+          {error && (
+            <div className="mt-4 text-sm text-red-600">{error}</div>
+          )}
         </div>
       </div>
     );
   }
 
+  // Main app
   return (
     <div className="min-h-screen bg-gray-100">
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+            <div className="ml-auto pl-3">
+              <button
+                onClick={() => setError(null)}
+                className="inline-flex text-red-400 hover:text-red-600"
+              >
+                <span className="sr-only">Dismiss</span>
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {user ? (
         <CalendarDashboard user={user} onLogout={handleLogout} />
       ) : (
